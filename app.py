@@ -13,10 +13,10 @@ load_css()
 # =============================
 # 🔐 GOOGLE LOGIN
 # =============================
-import os
+import streamlit as st
 
-CLIENT_ID = os.environ.get("CLIENT_ID")
-CLIENT_SECRET = os.environ.get("CLIENT_SECRET")
+CLIENT_ID = st.secrets["CLIENT_ID"]
+CLIENT_SECRET = st.secrets["CLIENT_SECRET"]
 
 oauth2 = OAuth2Component(
     CLIENT_ID,
