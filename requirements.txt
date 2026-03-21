@@ -1,9 +1,7 @@
 streamlit
-tensorflow
 numpy
 pandas
 matplotlib
 scikit-learn
 yfinance
-streamlit-oauth
-python-dotenv
+h5py

@@ -38,8 +38,7 @@ result = oauth2.authorize_button(
 if not result:
     st.stop()
 
-st.success("✅ Logged in successfully!")
-
+st.success("Demo Mode - Login Disabled")
 # =============================
 # 📊 SIDEBAR MENU
 # =============================
