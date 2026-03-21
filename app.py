@@ -1,5 +1,3 @@
-from dotenv import load_dotenv
-load_dotenv()
 import streamlit as st
 from streamlit_oauth import OAuth2Component
 
@@ -17,8 +15,8 @@ load_css()
 # =============================
 import os
 
-CLIENT_ID = os.getenv("CLIENT_ID")
-CLIENT_SECRET = os.getenv("CLIENT_SECRET")
+CLIENT_ID = os.environ.get("CLIENT_ID")
+CLIENT_SECRET = os.environ.get("CLIENT_SECRET")
 
 oauth2 = OAuth2Component(
     CLIENT_ID,
