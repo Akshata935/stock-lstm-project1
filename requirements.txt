@@ -1,8 +1,9 @@
 streamlit
 numpy
-matplotlib
+pandas
 scikit-learn
 yfinance
-tensorflow-cpu
-python-dotenv
+plotly
 streamlit-oauth
+requests
+tensorflow
