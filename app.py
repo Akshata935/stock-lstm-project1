@@ -1,3 +1,4 @@
+
 import streamlit as st
 import numpy as np
 import requests
@@ -403,7 +404,8 @@ The GRU learns temporal dependencies across this sequence end-to-end.
 <div class="info-box fade-up delay-2">
 <b>Data Source</b><br>
 5 years of daily OHLCV data via Yahoo Finance. Prices are MinMax scaled 
-to [0, 1] before training and inverse-transformed for output.
+to [0, 1] using parameters fitted only on the training split, then
+inverse-transformed for output — preventing test-period leakage.
 </div>
         """, unsafe_allow_html=True)
 
@@ -418,19 +420,38 @@ to [0, 1] before training and inverse-transformed for output.
             close_prices = df[['Close']].values
             current_price = float(close_prices[-1][0])
 
-            scaler = MinMaxScaler(feature_range=(0, 1))
-            scaled = scaler.fit_transform(close_prices)
-
             SEQ_LEN = seq_len_opt
-            X, Y = make_sequences(scaled, SEQ_LEN)     # X shape: (N, SEQ_LEN, 1)
 
-            if len(X) < 50:
-                st.error("Not enough historical data. Try a different ticker.")
+            # ── STEP 1: split RAW prices FIRST (chronological, no shuffling) ──
+            n_total = len(close_prices)
+            split_point = int(0.8 * n_total)
+
+            train_prices = close_prices[:split_point]
+            test_prices  = close_prices[split_point:]
+
+            if len(train_prices) < SEQ_LEN + 10 or len(test_prices) < SEQ_LEN + 10:
+                st.error("Not enough historical data for this lookback window. Try a different ticker or shorter lookback.")
                 st.stop()
 
-            split = int(0.8 * len(X))
-            X_train, X_test = X[:split], X[split:]
-            Y_train, Y_test = Y[:split], Y[split:]
+            # ── STEP 2: fit scaler ONLY on training prices (no leakage) ──
+            scaler = MinMaxScaler(feature_range=(0, 1))
+            scaler.fit(train_prices)
+
+            train_scaled = scaler.transform(train_prices)
+            test_scaled  = scaler.transform(test_prices)
+
+            # ── STEP 3: build sequences separately ──
+            # Test sequences need the last SEQ_LEN points of train data to seed
+            # the first test window — that's real past data, not leakage, and
+            # it's scaled using train-only parameters.
+            X_train, Y_train = make_sequences(train_scaled, SEQ_LEN)
+
+            test_seed = np.concatenate([train_scaled[-SEQ_LEN:], test_scaled], axis=0)
+            X_test, Y_test = make_sequences(test_seed, SEQ_LEN)
+
+            if len(X_train) < 30 or len(X_test) < 10:
+                st.error("Not enough historical data. Try a different ticker.")
+                st.stop()
 
             # ── Build & train GRU ──
             model = build_gru_model(SEQ_LEN)
@@ -446,10 +467,11 @@ to [0, 1] before training and inverse-transformed for output.
 
             pred_scaled  = model.predict(X_test, verbose=0)
             predictions  = scaler.inverse_transform(pred_scaled)
-            actual        = scaler.inverse_transform(Y_test.reshape(-1, 1))
+            actual       = scaler.inverse_transform(Y_test.reshape(-1, 1))
 
-            last_seq       = scaled[-SEQ_LEN:].reshape(1, SEQ_LEN, 1)
-            next_scaled    = model.predict(last_seq, verbose=0)
+            # last SEQ_LEN scaled points (train-fitted scaler) for live inference
+            full_scaled_tail = np.concatenate([train_scaled, test_scaled], axis=0)[-SEQ_LEN:]
+            next_scaled    = model.predict(full_scaled_tail.reshape(1, SEQ_LEN, 1), verbose=0)
             next_price     = float(scaler.inverse_transform(next_scaled)[0][0])
             price_change   = ((next_price - current_price) / current_price) * 100
 
@@ -675,24 +697,23 @@ on financial time-series data.
   </div>
   <div class="pipe-step">
     <div class="pipe-num">02</div>
-    <div><div class="pipe-title">MinMax Scaling</div>
-    <div class="pipe-desc">All closing prices are normalized to [0, 1] using MinMaxScaler.
-    This stabilizes gradient flow through the GRU cells and ensures
-    the sigmoid/tanh activations operate in their sensitive range.</div></div>
+    <div><div class="pipe-title">Chronological Train/Test Split</div>
+    <div class="pipe-desc">Raw closing prices are split 80/20 by time BEFORE any
+    scaling happens — first 80% for training, last 20% held out for testing.</div></div>
   </div>
   <div class="pipe-step">
     <div class="pipe-num">03</div>
+    <div><div class="pipe-title">MinMax Scaling (train-only fit)</div>
+    <div class="pipe-desc">The scaler is fitted ONLY on training prices and reused
+    (transform-only) on the test split. This prevents test-period information
+    from leaking into the training distribution.</div></div>
+  </div>
+  <div class="pipe-step">
+    <div class="pipe-num">04</div>
     <div><div class="pipe-title">3-D Sequence Construction</div>
     <div class="pipe-desc">A 60-day lookback window creates tensors of shape
     (samples, 60, 1). Unlike SVR which flattens the window,
     GRU processes each timestep recurrently to retain order.</div></div>
-  </div>
-  <div class="pipe-step">
-    <div class="pipe-num">04</div>
-    <div><div class="pipe-title">Train / Test Split (80/20)</div>
-    <div class="pipe-desc">Data is split chronologically — first 80% for training,
-    last 20% for evaluation. Random shuffling is not used to preserve
-    temporal ordering and prevent data leakage.</div></div>
   </div>
   <div class="pipe-step">
     <div class="pipe-num">05</div>
@@ -706,7 +727,7 @@ on financial time-series data.
     <div><div class="pipe-title">Inference & Inverse Transform</div>
     <div class="pipe-desc">The last 60 scaled prices are reshaped to (1, 60, 1) for live
     inference. The model output is inverse-transformed back to
-    actual ₹ price using the fitted scaler.</div></div>
+    actual ₹ price using the train-fitted scaler.</div></div>
   </div>
 </div>""", unsafe_allow_html=True)
 
