@@ -1,6 +1,6 @@
-# 📈 AI Stock Price Predictor — LSTM Deep Learning
+# 📈 AI Stock Price Predictor — GRU Deep Learning
 
-A stock market prediction system built with LSTM (Long Short-Term Memory) neural networks.
+A stock market prediction system built with GRU (Gatted Recurrent Unit) neural networks.
 Predicts NSE/BSE stock prices and generates Buy / Sell / Hold trading signals.
 
 ## 🚀 Live Demo
@@ -17,14 +17,14 @@ Predicts NSE/BSE stock prices and generates Buy / Sell / Hold trading signals.
 |---|---|
 | Data | yfinance (Yahoo Finance API) |
 | Preprocessing | Pandas, NumPy, Scikit-learn |
-| Model | TensorFlow / Keras (LSTM) |
+| Model | TensorFlow / Keras (GRU) |
 | Dashboard | Streamlit |
 | Deployment | Streamlit Cloud |
 
 ## 📁 Project Structure
 ```
 ├── app.py              # Streamlit dashboard (main file)
-├── train.py            # Train the LSTM model
+├── train.py            # Train the GRU model
 ├── data_loader.py      # Download and preprocess stock data
 ├── model.py            # LSTM model architecture
 ├── predict.py          # Offline prediction script
@@ -70,7 +70,7 @@ Output     → 1 (next day's predicted price)
 | Model accuracy | ~93–95% |
 
 ## 🔮 Future Work (Research Paper)
-- Attention-LSTM architecture for improved accuracy
+- Attention-GRU architecture for improved accuracy
 - Multi-stock comparison (TCS, Infosys, Wipro, HCL)
 - Sentiment analysis from NSE financial news
 - Target: Expert Systems with Applications (Elsevier Q1)
